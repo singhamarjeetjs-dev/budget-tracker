@@ -1,43 +1,135 @@
-import Header from "./components/Header";
-import TransactionForm, {
-  type Transaction,
-} from "./components/TransactionForm";
-import TransactionList from "./components/TransactionList";
-import SummaryCard from "./components/SummaryCard";
-import { useLocalStorage } from "./hooks/useLocalStorage";
+// src/App.tsx
+import { Routes, Route, Navigate } from 'react-router-dom';
+import Header from './components/Header';
+import Sidebar from './components/Sidebar';
+import Dashboard from './pages/Dashboard';
+import TransactionsPage from './pages/TransactionsPage';
+import LoginPage from './pages/Login';
+import SignupPage from './pages/Signup';
+import ProtectedRoute from './auth/ProtectedRoute';
+import PublicRoute from './auth/PublicRoute';
+import { useLocalStorage } from './hooks/useLocalStorage';
+import type { Transaction } from './components/TransactionForm';
+import { useEffect, useState } from 'react';
+import { useAuth } from './auth/AuthProvider';
+import { listenToUserTransactions, addTransactionForUser, deleteTransactionById } from './firestore/transactions';
 
 export default function App() {
-  const [items, setItems] = useLocalStorage<Transaction[]>("tx", []);
+  const [dark] = useLocalStorage<boolean>('dark', false);
+  const [items, setItems] = useState<(Transaction & { id: string })[]>([]);
+  const { user, loading } = useAuth();
 
-  const add = (t: Transaction) => setItems([t, ...items]);
-  const del = (id: string) => setItems(items.filter((x) => x.id !== id));
+  // 1) Clear items when user logs out (separate effect to avoid ESLint warning)
+  useEffect(() => {
+    if (loading) return;
+    if (!user) {
+      // only set if there is something to clear (avoids unnecessary state update)
+      setItems((prev) => (prev.length ? [] : prev));
+    }
+  }, [user, loading, setItems]);
+
+  // 2) Attach listener when a user is present (separate effect)
+  useEffect(() => {
+    if (loading) return;
+    if (!user) return;
+
+    const unsub = listenToUserTransactions(user.uid, (list) => {
+      setItems(list);
+    });
+
+    return () => {
+      try {
+        unsub();
+      } catch {
+        // ignore
+      }
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.uid, loading, setItems]);
+
+  // Optimistic add: update UI immediately with a temp id, then write to Firestore.
+  const handleAdd = async (t: Omit<Transaction, 'id'>) => {
+    if (!user) throw new Error('Not authenticated');
+
+    const tempId = `temp-${Date.now()}`;
+    const optimisticItem: Transaction & { id: string } = {
+      id: tempId,
+      amount: t.amount,
+      category: t.category,
+      date: t.date,
+      note: t.note ?? '',
+      type: t.type,
+    };
+
+    setItems((prev) => [optimisticItem, ...prev]);
+
+    try {
+      await addTransactionForUser(user.uid, t);
+      // realtime listener will reconcile authoritative data
+    } catch (err) {
+      console.error('Failed to add transaction:', err);
+      setItems((prev) => prev.filter((it) => it.id !== tempId));
+      throw err;
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (id.startsWith('temp-')) {
+      setItems((prev) => prev.filter((it) => it.id !== id));
+      return;
+    }
+    await deleteTransactionById(id);
+    // listener will update state
+  };
+
+  if (loading) return <div className="min-h-screen flex items-center justify-center">Checking authentication…</div>;
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <Header />
+    <div className={dark ? 'min-h-screen bg-gray-900 text-white' : 'min-h-screen bg-gray-50 text-gray-900'}>
+      <Routes>
+        <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
+        <Route path="/signup" element={<PublicRoute><SignupPage /></PublicRoute>} />
 
-      <main className="max-w-4xl mx-auto p-4 space-y-6">
-        <section>
-          <SummaryCard items={items} />
-        </section>
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute>
+              <div>
+                <Header />
+                <div className="max-w-7xl mx-auto px-6 py-6 grid lg:grid-cols-12 gap-6">
+                  <div className="lg:col-span-3">
+                    <Sidebar />
+                  </div>
+                  <div className="lg:col-span-9">
+                    <Dashboard items={items} />
+                  </div>
+                </div>
+              </div>
+            </ProtectedRoute>
+          }
+        />
 
-        <section className="grid md:grid-cols-3 gap-4 items-start">
-          <div className="md:col-span-1">
-            <TransactionForm onAdd={add} />
-          </div>
+        <Route
+          path="/transactions"
+          element={
+            <ProtectedRoute>
+              <div>
+                <Header />
+                <div className="max-w-7xl mx-auto px-6 py-6 grid lg:grid-cols-12 gap-6">
+                  <div className="lg:col-span-3">
+                    <Sidebar />
+                  </div>
+                  <div className="lg:col-span-9">
+                    <TransactionsPage items={items} onAdd={handleAdd} onDelete={handleDelete} />
+                  </div>
+                </div>
+              </div>
+            </ProtectedRoute>
+          }
+        />
 
-          <div className="md:col-span-2">
-            <h2 id="transactions" className="text-lg font-medium mb-2">
-              Transactions
-            </h2>
-            <TransactionList items={items} onDelete={del} />
-          </div>
-        </section>
-
-        <footer className="text-center text-sm text-gray-500 py-8">
-          Built with React + Vite • Deploy on Vercel
-        </footer>
-      </main>
+        <Route path="*" element={user ? <Navigate to="/" replace /> : <Navigate to="/login" replace />} />
+      </Routes>
     </div>
   );
 }

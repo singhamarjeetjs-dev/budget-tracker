@@ -13,15 +13,15 @@ export default function SummaryCard({ items }: Props) {
 
   return (
     <div className="grid grid-cols-3 gap-4">
-      <div className="p-4 bg-white rounded shadow text-center">
+      <div className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow text-center">
         <div className="text-sm text-gray-500">Income</div>
         <div className="text-xl font-semibold">₹{income.toFixed(2)}</div>
       </div>
-      <div className="p-4 bg-white rounded shadow text-center">
+      <div className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow text-center">
         <div className="text-sm text-gray-500">Expense</div>
         <div className="text-xl font-semibold">₹{expense.toFixed(2)}</div>
       </div>
-      <div className="p-4 bg-white rounded shadow text-center">
+      <div className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow text-center">
         <div className="text-sm text-gray-500">Balance</div>
         <div className="text-xl font-semibold">₹{balance.toFixed(2)}</div>
       </div>
