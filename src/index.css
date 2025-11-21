@@ -1,205 +1,180 @@
 /* src/index.css
-   Tailwind is integrated via the Vite plugin (@tailwindcss/vite).
-   Use the plugin import (NOT the @tailwind directives or @apply here).
+   Single unified UI stylesheet for Budget Tracker.
+   Tailwind is handled by the Vite plugin — we import it once.
 */
 @import "tailwindcss";
 
-/* --- Design tokens (simple, no PostCSS or @apply) --- */
+/* ------------------------
+   Design tokens (single source)
+   ------------------------ */
 :root{
-  --bg-page: #f8fafc;        /* light page background */
-  --text-strong: #0f172a;    /* slate-900 */
-  --muted: #6b7280;         /* gray-500 */
-  --card-bg: #ffffff;       /* card bg */
-  --accent: #6366f1;        /* indigo-500 */
-  --success: #10b981;       /* green-500 */
-  --danger: #ef4444;        /* red-500 */
+  --bg-page: #f5f7fa;
+  --bg-card: #ffffff;
+  --bg-neutral: #eef2f8;
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --accent: #6366f1;
+  --accent-2: #ec4899;
+  --success: #10b981;
+  --danger: #ef4444;
+
+  --shadow-1: 0 6px 18px rgba(15,23,42,0.06);
+  --shadow-2: 0 10px 30px rgba(15,23,42,0.08);
+
+  --radius: 14px;
+  --radius-sm: 8px;
+  --container-max: 1100px;
   --glass: rgba(255,255,255,0.6);
-  --shadow: 0 6px 18px rgba(15,23,42,0.06);
+  --muted-weak: rgba(0,0,0,0.04);
 }
 
-/* Dark mode tokens (activated by adding .dark on <html> or body) */
 .dark {
-  --bg-page: #0b1220;       /* near black */
-  --text-strong: #e6edf3;
-  --muted: #94a3b8;
-  --card-bg: #0f1724;
+  --bg-page: #071022;
+  --bg-card: #0f1724;
+  --bg-neutral: #0b1220;
+  --text-main: #e6edf3;
+  --text-muted: #94a3b8;
   --accent: #7c3aed;
-  --glass: rgba(15,23,42,0.6);
-  --shadow: 0 6px 24px rgba(2,6,23,0.7);
+  --accent-2: #f472b6;
+
+  --shadow-1: 0 6px 18px rgba(2,6,23,0.6);
+  --shadow-2: 0 10px 30px rgba(2,6,23,0.7);
+
+  --glass: rgba(8,12,20,0.6);
+  --muted-weak: rgba(255,255,255,0.04);
 }
 
-/* --- Global base --- */
-html, body, #root {
-  height: 100%;
-  margin: 0;
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  background-color: var(--bg-page);
-  color: var(--text-strong);
+/* ------------------------
+   Base / page
+   ------------------------ */
+html,body,#root{height:100%;margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial; -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;}
+body{background:var(--bg-page);color:var(--text-main);-webkit-font-smoothing:antialiased;}
+
+/* center container helper (works with Tailwind grid) */
+.container-centered{max-width:var(--container-max);margin-left:auto;margin-right:auto;padding-left:1rem;padding-right:1rem;}
+
+/* ------------------------
+   Header (glass + subtle)
+   ------------------------ */
+.app-header{
+  background: rgba(255,255,255,0.78);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--muted-weak);
+  box-shadow: 0 4px 10px rgba(2,6,23,0.03);
+}
+.dark .app-header{
+  background: rgba(8,12,20,0.64);
+  border-bottom: 1px solid var(--muted-weak);
 }
 
-/* Utility-ish helpers (no Tailwind @apply) */
-.container-centered {
-  max-width: 1100px;
-  margin-left: auto;
-  margin-right: auto;
-  padding-left: 1rem;
-  padding-right: 1rem;
+/* header inner */
+.app-header .brand{display:flex;align-items:center;gap:0.75rem;font-weight:600;}
+.logo-box{width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;}
+
+/* header user area */
+.header-user{display:flex;align-items:center;gap:0.75rem;}
+.header-user .avatar{width:36px;height:36px;border-radius:9999px;display:flex;align-items:center;justify-content:center;background:rgba(99,102,241,0.12);color:var(--accent);font-weight:700}
+
+/* ------------------------
+   Sidebar
+   ------------------------ */
+.sidebar{
+  background:var(--bg-card);
+  border-radius:var(--radius);
+  padding:1.25rem;
+  box-shadow:var(--shadow-1);
+  border:1px solid var(--muted-weak);
+  height:100%;
+}
+.sidebar a{display:block;padding:.6rem .8rem;border-radius:10px;color:var(--text-muted);transition:all .15s}
+.sidebar a:hover{background:var(--bg-neutral);color:var(--text-main)}
+.sidebar a.active{background:linear-gradient(90deg,var(--accent),var(--accent-2));color:#fff}
+
+/* ------------------------
+   Cards & containers
+   ------------------------ */
+.app-card{background:var(--bg-card);border-radius:var(--radius);padding:1.25rem;box-shadow:var(--shadow-1);border:1px solid var(--muted-weak);transition:all .18s}
+.app-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-2)}
+.summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem}
+@media (max-width:1024px){.summary-grid{grid-template-columns:repeat(1,1fr)}}
+
+/* small summary item */
+.summary-item{display:flex;align-items:center;justify-content:space-between;gap:1rem}
+.summary-item .left{display:flex;flex-direction:column}
+.summary-item .right{font-weight:700;font-size:1.05rem}
+
+/* ------------------------
+   Buttons
+   ------------------------ */
+.btn{display:inline-flex;align-items:center;justify-content:center;padding:.55rem .85rem;border-radius:var(--radius-sm);font-weight:600;cursor:pointer}
+.btn-primary{background:linear-gradient(90deg,var(--accent),var(--accent-2));color:#fff;box-shadow:0 8px 24px rgba(99,102,241,0.12)}
+.btn-primary:hover{transform:translateY(-3px)}
+.btn-ghost{background:transparent;border:1px solid var(--muted-weak);color:var(--text-main)}
+
+/* ------------------------
+   Forms / Inputs
+   ------------------------ */
+.input{width:100%;padding:.65rem .8rem;border-radius:var(--radius-sm);background:var(--bg-neutral);border:1px solid var(--muted-weak);color:inherit;transition:all .12s}
+.input:focus{outline:none;box-shadow:0 0 0 4px rgba(99,102,241,0.08);border-color:var(--accent)}
+
+/* form row small helpers */
+.form-row{display:flex;gap:.6rem;align-items:center}
+.form-col{flex:1}
+
+/* ------------------------
+   Transaction list
+   ------------------------ */
+.tx-list{border-radius:10px;overflow:hidden;border:1px solid var(--muted-weak);background:linear-gradient(180deg,rgba(255,255,255,0.02),transparent)}
+.tx-row{display:flex;justify-content:space-between;align-items:center;padding:0.9rem 1rem;border-bottom:1px solid var(--muted-weak);transition:all .12s}
+.tx-row:hover{background:var(--bg-neutral)}
+.tx-row .meta{display:flex;flex-direction:column;gap:4px}
+.label-pill{display:inline-block;padding:4px 8px;border-radius:999px;font-size:.75rem;font-weight:700}
+.type-income{background:rgba(16,185,129,0.12);color:var(--success)}
+.type-expense{background:rgba(239,68,68,0.12);color:var(--danger)}
+
+/* ------------------------
+   Auth pages
+   ------------------------ */
+.app-auth-bg{background:linear-gradient(180deg,#eef2ff 0%,#ffffff 100%)}
+.dark .app-auth-bg{background:linear-gradient(180deg,#071322 0%,#0b1220 100%)}
+.auth-card{max-width:480px;margin-left:auto;margin-right:auto;padding:2rem;border-radius:12px;background:var(--bg-card);box-shadow:var(--shadow-2);border:1px solid var(--muted-weak)}
+
+/* small text */
+.muted{color:var(--text-muted);font-size:.95rem}
+.hint{color:var(--text-muted);font-size:.85rem}
+
+/* ------------------------
+   Small utilities
+   ------------------------ */
+.center{display:flex;align-items:center;justify-content:center}
+.pulse{animation:pulse-anim 2s infinite}
+@keyframes pulse-anim{0%{opacity:1}50%{opacity:.6}100%{opacity:1}}
+
+/* responsive tweaks */
+@media (max-width:768px){
+  .sidebar{display:none}
+  .summary-grid{grid-template-columns:1fr}
 }
 
-/* Subtle page background for auth screens */
-.app-auth-bg {
-  background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
-}
-.dark .app-auth-bg {
-  background: linear-gradient(180deg, #071022 0%, #0b1220 100%);
+/* Mobile header/menu tweaks */
+@media (max-width: 768px) {
+  /* reduce header padding for mobile */
+  .app-header .container-centered { padding-left: 0.75rem; padding-right: 0.75rem; }
+
+  /* ensure logo text hides to save space */
+  .app-header .brand .text-lg { display: none; }
+
+  /* mobile app-card full-width with slight inset */
+  .app-header + * { /* no-op, keep layout consistent */ }
+
+  /* mobile menu card should be full width and slightly lifted */
+  .app-header .app-card, .app-header + .app-card { width: 100%; }
 }
 
-/* Auth card */
-.auth-card {
-  width: 100%;
-  max-width: 420px;
-  margin-left: auto;
-  margin-right: auto;
-  padding: 1.25rem; /* 20px */
-  background: var(--card-bg);
-  border-radius: 0.75rem; /* 12px */
-  box-shadow: var(--shadow);
-  border: 1px solid rgba(15,23,42,0.04);
-}
-.dark .auth-card {
-  border: 1px solid rgba(255,255,255,0.04);
-}
-
-/* Header / sidebar chrome wrappers */
-.app-header {
-  background: rgba(255,255,255,0.8);
-  backdrop-filter: blur(6px);
-  border-bottom: 1px solid rgba(15,23,42,0.04);
-}
-.dark .app-header {
-  background: rgba(10,15,25,0.6);
-  border-bottom: 1px solid rgba(255,255,255,0.04);
-}
-
-/* Card style used across the app */
-.app-card {
-  background: var(--card-bg);
-  border-radius: 0.75rem;
-  box-shadow: var(--shadow);
-  padding: 1rem;
-  border: 1px solid rgba(15,23,42,0.04);
-}
-.dark .app-card {
-  border: 1px solid rgba(255,255,255,0.04);
-}
-
-/* Summary cards grid */
-.summary-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1rem;
-}
-
-/* Simple responsive layout tweaks */
+/* ensure sidebar hidden on small devices (you had this but reinforce) */
 @media (max-width: 1024px) {
-  .summary-grid {
-    grid-template-columns: repeat(1, 1fr);
-  }
+  .sidebar { display: none; }
 }
 
-/* Buttons (small set used in auth & header) */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.5rem 0.75rem;
-  border-radius: 0.5rem;
-  font-weight: 600;
-  border: none;
-  cursor: pointer;
-}
-.btn-primary {
-  background: linear-gradient(90deg,var(--accent), #ec4899);
-  color: white;
-  box-shadow: 0 6px 18px rgba(99,102,241,0.12);
-}
-.btn-ghost {
-  background: transparent;
-  border: 1px solid rgba(15,23,42,0.06);
-  color: var(--text-strong);
-}
 
-/* Forms */
-.input {
-  width: 100%;
-  padding: 0.5rem 0.75rem;
-  border-radius: 0.5rem;
-  border: 1px solid rgba(15,23,42,0.06);
-  background: transparent;
-  color: inherit;
-  outline: none;
-}
-.input:focus {
-  box-shadow: 0 0 0 4px rgba(99,102,241,0.06);
-  border-color: var(--accent);
-}
-
-/* small helper text */
-.muted {
-  color: var(--muted);
-  font-size: 0.9rem;
-}
-
-/* Table / list tweaks for transaction list */
-.tx-list {
-  width: 100%;
-  border-radius: 0.5rem;
-  overflow: hidden;
-  border: 1px solid rgba(15,23,42,0.04);
-}
-.tx-row {
-  display: flex;
-  justify-content: space-between;
-  padding: 0.75rem 1rem;
-  align-items: center;
-  border-bottom: 1px solid rgba(15,23,42,0.04);
-}
-.tx-row:last-child {
-  border-bottom: 0;
-}
-
-/* small labels */
-.label-pill {
-  display: inline-block;
-  padding: 0.25rem 0.5rem;
-  border-radius: 999px;
-  font-size: 0.75rem;
-  font-weight: 600;
-}
-
-/* Colors for types */
-.type-income {
-  background: rgba(16,185,129,0.12);
-  color: var(--success);
-}
-.type-expense {
-  background: rgba(239,68,68,0.08);
-  color: var(--danger);
-}
-
-/* Empty states */
-.empty-state {
-  padding: 2rem;
-  text-align: center;
-  color: var(--muted);
-}
-
-/* Small responsive tweaks */
-@media (max-width: 640px) {
-  .auth-card { padding: 1rem; }
-  .summary-grid { gap: 0.75rem; }
-}
-
-/* End of file */
+/* End of unified UI stylesheet */

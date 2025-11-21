@@ -13,6 +13,7 @@ import type { Transaction } from './components/TransactionForm';
 import { useEffect, useState } from 'react';
 import { useAuth } from './auth/AuthProvider';
 import { listenToUserTransactions, addTransactionForUser, deleteTransactionById } from './firestore/transactions';
+import './App.css';
 
 export default function App() {
   const [dark] = useLocalStorage<boolean>('dark', false);
