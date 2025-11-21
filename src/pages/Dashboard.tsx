@@ -1,5 +1,4 @@
 // File: src/pages/Dashboard.tsx
-import SummaryCard from '../components/SummaryCard';
 import Chart from '../components/Chart';
 import type { Transaction } from '../components/TransactionForm';
 
