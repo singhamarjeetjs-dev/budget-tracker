@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// File: src/pages/TransactionsPage.tsx
+// src/pages/TransactionsPage.tsx
 import { useMemo, useState } from 'react';
 import TransactionForm from '../components/TransactionForm';
 import type { Transaction } from '../components/TransactionForm';
@@ -10,6 +10,36 @@ type Props = {
   onAdd: (t: Omit<Transaction, 'id'>) => Promise<void> | void;
   onDelete: (id: string) => Promise<void> | void;
 };
+
+/** helper: month-year label from date string (expects YYYY-MM-DD or ISO) */
+function monthLabelFromDate(dateStr: string) {
+  try {
+    const d = new Date(dateStr);
+    return d.toLocaleString(undefined, { month: 'long', year: 'numeric' });
+  } catch {
+    return dateStr;
+  }
+}
+
+/** group items by month-year (descending months) */
+function groupByMonth(items: (Transaction & { id: string })[]) {
+  const map = new Map<string, (Transaction & { id: string })[]>();
+  for (const it of items) {
+    const label = monthLabelFromDate(it.date || '');
+    if (!map.has(label)) map.set(label, []);
+    map.get(label)!.push(it);
+  }
+
+  // convert to sorted array of [label, items], newest month first
+  const arr = Array.from(map.entries()).sort((a, b) => {
+    // try parse year-month from first item's date
+    const aDate = new Date(a[1][0]?.date || 0).getTime();
+    const bDate = new Date(b[1][0]?.date || 0).getTime();
+    return bDate - aDate;
+  });
+
+  return arr;
+}
 
 const EmptyState: FC<{ actionLabel?: string }> = ({ actionLabel = 'Add your first transaction' }) => (
   <div className="app-card center flex-col gap-4 p-8">
@@ -63,6 +93,8 @@ export default function TransactionsPage({ items, onAdd, onDelete }: Props) {
     });
   }, [items, query, typeFilter, categoryFilter]);
 
+  const grouped = useMemo(() => groupByMonth(filtered), [filtered]);
+
   function exportCSV(list: (Transaction & { id: string })[]) {
     const header = ['id', 'date', 'type', 'category', 'amount', 'note'];
     const rows = list.map((t) => [t.id, t.date, t.type, t.category, t.amount.toString(), t.note ?? '']);
@@ -97,14 +129,11 @@ export default function TransactionsPage({ items, onAdd, onDelete }: Props) {
           type: obj.type === 'income' ? 'income' : 'expense',
         };
         if (!payload.amount) continue;
-        // sequential to avoid rate-limit surprises
         // eslint-disable-next-line no-await-in-loop
         await onAdd(payload);
       }
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (e) {
-      // silent for now
-      // console.error(e);
+      console.error('Import failed', e);
     } finally {
       setImporting(false);
     }
@@ -221,33 +250,44 @@ export default function TransactionsPage({ items, onAdd, onDelete }: Props) {
                   <div className="muted text-sm">Showing latest first</div>
                 </div>
 
-                {filtered.length === 0 ? (
+                {grouped.length === 0 ? (
                   <EmptyState actionLabel="Add your first transaction" />
                 ) : (
-                  <div className="tx-list">
-                    {filtered.map((t) => (
-                      <div key={t.id} className="tx-row">
-                        <div className="meta">
-                          <div className="flex items-center gap-3">
-                            <div className={`label-pill ${t.type === 'income' ? 'type-income' : 'type-expense'}`}>{t.category}</div>
-                            <div className="text-sm muted">{t.date}</div>
-                          </div>
-                          <div className="text-sm text-gray-700 dark:text-gray-200">{t.note}</div>
+                  <div className="space-y-6">
+                    {grouped.map(([monthLabel, txs]) => (
+                      <section key={monthLabel}>
+                        <div className="flex items-center justify-between mb-3">
+                          <h4 className="font-semibold">{monthLabel}</h4>
+                          <div className="muted text-sm">{txs.length} items</div>
                         </div>
 
-                        <div className="flex items-center gap-4">
-                          <div className={`font-semibold ${t.type === 'expense' ? 'text-red-500' : 'text-green-500'}`}>
-                            {t.type === 'expense' ? '-' : '+'}₹{t.amount.toFixed(2)}
-                          </div>
-                          <button
-                            onClick={() => handleDelete(t.id)}
-                            className="text-sm text-red-500 hover:underline"
-                            disabled={deletingId === t.id}
-                          >
-                            {deletingId === t.id ? 'Deleting…' : 'Delete'}
-                          </button>
+                        <div className="tx-list">
+                          {txs.map((t) => (
+                            <div key={t.id} className="tx-row">
+                              <div className="meta">
+                                <div className="flex items-center gap-3">
+                                  <div className={`label-pill ${t.type === 'income' ? 'type-income' : 'type-expense'}`}>{t.category}</div>
+                                  <div className="text-sm muted">{t.date}</div>
+                                </div>
+                                <div className="text-sm text-gray-700 dark:text-gray-200">{t.note}</div>
+                              </div>
+
+                              <div className="flex items-center gap-4">
+                                <div className={`font-semibold ${t.type === 'expense' ? 'text-red-500' : 'text-green-500'}`}>
+                                  {t.type === 'expense' ? '-' : '+'}₹{t.amount.toFixed(2)}
+                                </div>
+                                <button
+                                  onClick={() => handleDelete(t.id)}
+                                  className="text-sm text-red-500 hover:underline"
+                                  disabled={deletingId === t.id}
+                                >
+                                  {deletingId === t.id ? 'Deleting…' : 'Delete'}
+                                </button>
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                      </div>
+                      </section>
                     ))}
                   </div>
                 )}

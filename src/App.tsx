@@ -12,43 +12,59 @@ import { useLocalStorage } from './hooks/useLocalStorage';
 import type { Transaction } from './components/TransactionForm';
 import { useEffect, useState } from 'react';
 import { useAuth } from './auth/AuthProvider';
-import { listenToUserTransactions, addTransactionForUser, deleteTransactionById } from './firestore/transactions';
-import './App.css';
+import {
+  listenToUserTransactions,
+  addTransactionForUser,
+  deleteTransactionById,
+  getUserTransactions,
+} from './firestore/transactions';
 
 export default function App() {
   const [dark] = useLocalStorage<boolean>('dark', false);
   const [items, setItems] = useState<(Transaction & { id: string })[]>([]);
   const { user, loading } = useAuth();
 
-  // 1) Clear items when user logs out (separate effect to avoid ESLint warning)
+  // Clear items when user logs out (separate effect)
   useEffect(() => {
     if (loading) return;
     if (!user) {
-      // only set if there is something to clear (avoids unnecessary state update)
       setItems((prev) => (prev.length ? [] : prev));
     }
-  }, [user, loading, setItems]);
+  }, [user, loading]);
 
-  // 2) Attach listener when a user is present (separate effect)
-  useEffect(() => {
-    if (loading) return;
-    if (!user) return;
+  // inside App.tsx (replace the login/init useEffect)
+useEffect(() => {
+  if (loading) return;
+  if (!user) return;
 
-    const unsub = listenToUserTransactions(user.uid, (list) => {
-      setItems(list);
-    });
+  let unsub = () => {};
 
-    return () => {
-      try {
-        unsub();
-      } catch {
-        // ignore
-      }
-    };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.uid, loading, setItems]);
+  (async () => {
+    try {
+      console.info('Transaction init for uid:', user.uid);
 
-  // Optimistic add: update UI immediately with a temp id, then write to Firestore.
+      // 1) One-shot fetch strictly by uid (no broad queries)
+      const initial = await getUserTransactions(user.uid);
+      setItems(initial);
+
+      // 2) Attach realtime listener strictly by uid
+      unsub = listenToUserTransactions(user.uid, (list) => {
+        setItems(list);
+      });
+    } catch (e) {
+      console.error('Error initializing transactions for user:', e);
+    }
+  })();
+
+  return () => {
+    // eslint-disable-next-line no-empty
+    try { unsub(); } catch {}
+  };
+// eslint-disable-next-line react-hooks/exhaustive-deps
+}, [user?.uid, loading]);
+
+
+  // Optimistic add
   const handleAdd = async (t: Omit<Transaction, 'id'>) => {
     if (!user) throw new Error('Not authenticated');
 
@@ -66,7 +82,6 @@ export default function App() {
 
     try {
       await addTransactionForUser(user.uid, t);
-      // realtime listener will reconcile authoritative data
     } catch (err) {
       console.error('Failed to add transaction:', err);
       setItems((prev) => prev.filter((it) => it.id !== tempId));
@@ -80,7 +95,6 @@ export default function App() {
       return;
     }
     await deleteTransactionById(id);
-    // listener will update state
   };
 
   if (loading) return <div className="min-h-screen flex items-center justify-center">Checking authentication…</div>;

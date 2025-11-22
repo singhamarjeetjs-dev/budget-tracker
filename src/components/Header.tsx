@@ -23,16 +23,29 @@ export default function Header() {
     }
   };
 
-  // close mobile menu on outside click or route change
+  // close mobile menu on outside click
   useEffect(() => {
     function onDocClick(e: MouseEvent) {
       if (!open) return;
-      if (mobileMenuRef.current && !mobileMenuRef.current.contains(e.target as Node)) {
+      const el = mobileMenuRef.current;
+      if (el && e.target instanceof Node && !el.contains(e.target)) {
         setOpen(false);
       }
     }
     window.addEventListener('click', onDocClick);
     return () => window.removeEventListener('click', onDocClick);
+  }, [open]);
+
+  // prevent body scroll when mobile menu is open
+  useEffect(() => {
+    if (open) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
   }, [open]);
 
   return (
@@ -55,11 +68,7 @@ export default function Header() {
             Transactions
           </NavLink>
           <button
-            onClick={() => {
-              // export quick action or other
-              // placeholder: navigate to /transactions for export UI
-              navigate('/transactions');
-            }}
+            onClick={() => navigate('/transactions')}
             className="px-3 py-2 rounded-md btn-ghost"
           >
             Export
@@ -95,10 +104,13 @@ export default function Header() {
           <button
             className="md:hidden p-2 rounded-md border"
             aria-label="Open menu"
-            onClick={() => setOpen((s) => !s)}
+            onClick={(e) => {
+              // stop propagation so our global click handler doesn't immediately close the menu
+              e.stopPropagation();
+              setOpen((s) => !s);
+            }}
             title="Menu"
           >
-            {/* simple hamburger icon */}
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
               <path d="M3 6h18M3 12h18M3 18h18" />
             </svg>
@@ -108,8 +120,8 @@ export default function Header() {
 
       {/* mobile menu panel (full width, stacked) */}
       {open && (
-        <div ref={mobileMenuRef} className="md:hidden px-4 pb-4">
-          <div className="app-card w-full">
+        <div className="md:hidden px-4 pb-4" onClick={(e) => e.stopPropagation()}>
+          <div ref={mobileMenuRef} className="app-card w-full">
             <div className="flex flex-col gap-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -119,7 +131,7 @@ export default function Header() {
                     <div className="muted text-sm">{user?.email}</div>
                   </div>
                 </div>
-                <button onClick={() => setOpen(false)} aria-label="Close menu" className="p-2">
+                <button onClick={(e) => { e.stopPropagation(); setOpen(false); }} aria-label="Close menu" className="p-2">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M18 6L6 18M6 6l12 12" />
                   </svg>
@@ -127,12 +139,8 @@ export default function Header() {
               </div>
 
               <div className="flex flex-col gap-1">
-                <Link to="/" onClick={() => setOpen(false)} className="px-3 py-2 rounded-md">
-                  Dashboard
-                </Link>
-                <Link to="/transactions" onClick={() => setOpen(false)} className="px-3 py-2 rounded-md">
-                  Transactions
-                </Link>
+                <Link to="/" onClick={() => setOpen(false)} className="px-3 py-2 rounded-md">Dashboard</Link>
+                <Link to="/transactions" onClick={() => setOpen(false)} className="px-3 py-2 rounded-md">Transactions</Link>
                 <button
                   onClick={() => { setOpen(false); navigate('/transactions'); }}
                   className="px-3 py-2 rounded-md btn-ghost text-left"

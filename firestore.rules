@@ -1,0 +1,24 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /transactions/{txId} {
+      // Create: only allowed when the incoming document explicitly sets uid == request.auth.uid
+      allow create: if request.auth != null
+                    && request.resource.data.uid == request.auth.uid;
+
+      // Read / Update / Delete:
+      // Allow if the stored document has uid equal to the signed-in user,
+      // OR (legacy) if the stored document has ownerEmail equal to the user's email token.
+      allow read, update, delete: if request.auth != null
+         && (
+           (resource.data.uid != null && resource.data.uid == request.auth.uid)
+           || (resource.data.ownerEmail != null && resource.data.ownerEmail == request.auth.token.email)
+         );
+    }
+
+    // Deny everything else by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
